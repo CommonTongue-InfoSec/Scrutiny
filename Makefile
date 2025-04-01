@@ -25,3 +25,24 @@ bin/%: src/%.c
 .PHONY: clean
 clean:
 	rm -f $(BINS)
+
+# Run targets
+.PHONY: run_baseliner
+run_baseliner: bin/baseliner
+	./bin/baseliner
+
+.PHONY: run_targetProc0
+run_targetProc0: bin/targetProc0
+	./bin/targetProc0
+
+.PHONY: run_targetProc1
+run_targetProc1: bin/targetProc1
+	./bin/targetProc1
+
+.PHONY: run_targetProc2
+run_targetProc2: bin/targetProc2
+	./bin/targetProc2
+
+.PHONY: run_monitor
+run_monitor: bin/monitor
+	./bin/monitor
