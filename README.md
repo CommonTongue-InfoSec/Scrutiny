@@ -1,5 +1,5 @@
 # Scrutiny
-A tool to establish behavioral baselines for processes by tracing system calls, useful for detecting potential malicious deviations.
+A tool to establish behavioral baselines for processes by tracing various behaviors. Goal: Detect Malicious Deviations
 
 ## Usage (preparation)
 1. It's a linux program
