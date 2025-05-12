@@ -1,0 +1,11 @@
+if (iter == 30)
+        {
+            if (access(SENSITIVE_FILE1, F_OK) == -1) 
+            {
+                fprintf(stderr, "Error accessing %s: %s\n", SENSITIVE_FILE1, strerror(errno));
+            }
+            else 
+            {
+                printf("targetProc0: Accessed %s\n", SENSITIVE_FILE1);
+            }
+        }

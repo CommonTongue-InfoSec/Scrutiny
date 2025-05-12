@@ -12,12 +12,15 @@
 #include <time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include "syscalls.h"
+#include "utils.h"
 
 pid_t target_pid = 0;
 
 void handle_sigint(int sig) 
 {
-    if (target_pid > 0) {
+    if (target_pid > 0) 
+    {
         printf("\nBaseliner: Caught Ctrl+C, detaching from PID %d\n", target_pid);
         if (ptrace(PTRACE_CONT, target_pid, NULL, NULL) == -1) 
         {
@@ -34,52 +37,14 @@ void handle_sigint(int sig)
 
 void log_syscall(long syscall_num, FILE *log) 
 {
-    const char *syscall_name = "unknown";
-    switch (syscall_num) 
-    {
-        case 0: syscall_name = "read"; break;
-        case 1: syscall_name = "write"; break;
-        case 2: syscall_name = "open"; break;
-        case 3: syscall_name = "close"; break;
-        case 219: syscall_name = "time"; break;
-        case 230: syscall_name = "nanosleep"; break;
-        case 231: syscall_name = "exit_group"; break;
-        case 257: syscall_name = "openat"; break;
-    }
+    const char *syscall_name = get_syscall_name(syscall_num);
     
     time_t now = time(NULL);
-    
     char *timestamp = ctime(&now);
     timestamp[strlen(timestamp) - 1] = '\0';
     
     fprintf(log, "[%s] Syscall: %ld (%s)\n", timestamp, syscall_num, syscall_name);
     fflush(log);
-}
-
-char *get_process_name(pid_t pid) 
-{
-    char path[32];
-    char *name = malloc(256);
-    if (!name) return NULL;
-
-    snprintf(path, sizeof(path), "/proc/%d/comm", pid);
-    FILE *comm = fopen(path, "r");
-    if (!comm) 
-    {
-        free(name);
-        return NULL;
-    }
-    if (fgets(name, 256, comm) == NULL) 
-    {
-        fclose(comm);
-        free(name);
-        return NULL;
-    }
-    
-    fclose(comm);
-    
-    name[strcspn(name, "\n")] = 0;
-    return name;
 }
 
 int main() {
@@ -163,11 +128,13 @@ int main() {
             fprintf(stderr, "waitpid failed: %s\n", strerror(errno));
             break;
         }
+        
         if (WIFEXITED(status) || WIFSIGNALED(status)) 
         {
             printf("Baseliner: Target PID %d exited\n", pid);
             break;
         }
+        
         if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP) 
         {
             struct user_regs_struct regs;
@@ -183,6 +150,7 @@ int main() {
             }
             in_syscall = !in_syscall;
         }
+        
         if (ptrace(PTRACE_SYSCALL, pid, NULL, NULL) == -1) 
         {
             fprintf(stderr, "PTRACE_SYSCALL failed in loop: %s\n", strerror(errno));

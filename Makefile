@@ -1,48 +1,77 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -g
+CFLAGS = -Wall -O2 -I$(SRC_DIR)
+LDFLAGS =
 
-# Source files (dynamically detected)
-SRCS = $(wildcard src/*.c)
+# Dirs
+SRC_DIR = src
+OBJ_DIR = obj
+BIN_DIR = bin
 
-# Binary files (derived from sources)
-BINS = $(patsubst src/%.c, bin/%,$(SRCS))
+# Source files
+BASLINER_SRCS = $(SRC_DIR)/baseliner.c $(SRC_DIR)/syscalls.c $(SRC_DIR)/utils.c
+TARGET0_SRCS = $(SRC_DIR)/targetProc0.c
+TARGET1_SRCS = $(SRC_DIR)/targetProc1.c
+TARGET2_SRCS = $(SRC_DIR)/targetProc2.c
 
-# Default target: build all binaries
-.PHONY: all
-all: $(BINS)
+# Objs
+BASLINER_OBJS = $(BASLINER_SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+TARGET0_OBJS = $(TARGET0_SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+TARGET1_OBJS = $(TARGET1_SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+TARGET2_OBJS = $(TARGET2_SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-# Rule to create bin/ directory if not exists
-$(BINS): | bin
-bin:
-	mkdir -p bin
+# Executables
+BASLINER_EXEC = $(BIN_DIR)/baseliner
+TARGET0_EXEC = $(BIN_DIR)/targetProc0
+TARGET1_EXEC = $(BIN_DIR)/targetProc1
+TARGET2_EXEC = $(BIN_DIR)/targetProc2
 
-# Rule to compile each source file to its binary
-bin/%: src/%.c
-	$(CC) $(CFLAGS) -o $@ $<
+# All targets
+EXECUTABLES = $(BASLINER_EXEC) $(TARGET0_EXEC) $(TARGET1_EXEC) $(TARGET2_EXEC)
 
-# Clean target to remove binaries
-.PHONY: clean
+# Default target
+all: $(EXECUTABLES)
+
+# Link executables
+$(BASLINER_EXEC): $(BASLINER_OBJS) | $(BIN_DIR)
+	$(CC) $(BASLINER_OBJS) $(LDFLAGS) -o $@
+
+$(TARGET0_EXEC): $(TARGET0_OBJS) | $(BIN_DIR)
+	$(CC) $(TARGET0_OBJS) $(LDFLAGS) -o $@
+
+$(TARGET1_EXEC): $(TARGET1_OBJS) | $(BIN_DIR)
+	$(CC) $(TARGET1_OBJS) $(LDFLAGS) -o $@
+
+$(TARGET2_EXEC): $(TARGET2_OBJS) | $(BIN_DIR)
+	$(CC) $(TARGET2_OBJS) $(LDFLAGS) -o $@
+
+# Compile source files to object files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -M -MT $@ $< > $(@:.o=.d)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Create directories
+$(BIN_DIR) $(OBJ_DIR):
+	mkdir -p $@
+
+# make run <target>
+run: $(EXECUTABLES)
+	@if [ -z "$(filter baseliner targetProc0 targetProc1 targetProc2,$(word 2,$(MAKECMDGOALS)))" ]; then \
+    	echo "Error: Please specify a valid target to run (baseliner, targetProc0, targetProc1, targetProc2)"; \
+    	echo "Example: make run baseliner"; \
+    	exit 1; \
+	fi
+	@echo "Running $(BIN_DIR)/$(word 2,$(MAKECMDGOALS))..."
+	@$(BIN_DIR)/$(word 2,$(MAKECMDGOALS))
+
+# no running as file
+%:
+	@:
+
 clean:
-	rm -f $(BINS)
+	rm -f $(OBJ_DIR)/* $(BIN_DIR)/*
 
-# Run targets
-.PHONY: run_baseliner
-run_baseliner: bin/baseliner
-	./bin/baseliner
+# Include dependencies
+-include $(OBJ_DIR)/*.d
 
-.PHONY: run_targetProc0
-run_targetProc0: bin/targetProc0
-	./bin/targetProc0
-
-.PHONY: run_targetProc1
-run_targetProc1: bin/targetProc1
-	./bin/targetProc1
-
-.PHONY: run_targetProc2
-run_targetProc2: bin/targetProc2
-	./bin/targetProc2
-
-.PHONY: run_monitor
-run_monitor: bin/monitor
-	./bin/monitor
+.PHONY: all clean run
